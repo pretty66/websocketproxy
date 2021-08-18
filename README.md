@@ -5,7 +5,7 @@
 ### 使用示例
 
 #### Install
-> go get pretty66/websocketproxy
+> go get github.com/pretty66/websocketproxy
 
 
 #### 
@@ -35,3 +35,64 @@ http.ListenAndServe(":9696", nil)
 
 ### 示例
 ![示例](ws_test.png)
+
+
+
+### 核心流量转发代码
+```go
+func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Request) {
+	if strings.ToLower(request.Header.Get("Connection")) != "upgrade" ||
+		strings.ToLower(request.Header.Get("Upgrade")) != "websocket" {
+		_, _ = writer.Write([]byte(`Must be a websocket request`))
+		return
+	}
+	hijacker, ok := writer.(http.Hijacker)
+	if !ok {
+		return
+	}
+	conn, _, err := hijacker.Hijack()
+	if err != nil {
+		return
+	}
+	defer conn.Close()
+	req := request.Clone(context.TODO())
+	req.URL.Path, req.URL.RawPath, req.RequestURI = wp.defaultPath, wp.defaultPath, wp.defaultPath
+	req.Host = wp.remoteAddr
+	if wp.beforeHandshake != nil {
+		// 增加头部，权限认证 + 伪装来源
+		err = wp.beforeHandshake(req)
+		if err != nil {
+			_, _ = writer.Write([]byte(err.Error()))
+			return
+		}
+	}
+	var remoteConn net.Conn
+	switch wp.scheme {
+	case WsScheme:
+		remoteConn, err = net.Dial("tcp", wp.remoteAddr)
+	case WssScheme:
+		remoteConn, err = tls.Dial("tcp", wp.remoteAddr, wp.tlsc)
+	}
+	if err != nil {
+		_, _ = writer.Write([]byte(err.Error()))
+		return
+	}
+	defer remoteConn.Close()
+	b, _ := httputil.DumpRequest(req, false)
+	remoteConn.Write(b)
+
+	errChan := make(chan error, 2)
+	copyConn := func(a, b net.Conn) {
+		_, err := io.Copy(a, b)
+		errChan <- err
+	}
+	go copyConn(conn, remoteConn) // response
+	go copyConn(remoteConn, conn) // request
+	select {
+	case err = <-errChan:
+		if err != nil {
+			log.Println(err)
+		}
+	}
+}
+```
