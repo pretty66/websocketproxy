@@ -1,7 +1,6 @@
 package websocketproxy
 
 import (
-	"context"
 	"crypto/tls"
 	"errors"
 	"io"
@@ -68,7 +67,7 @@ func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Reques
 		return
 	}
 	defer conn.Close()
-	req := request.Clone(context.TODO())
+	req := request.Clone(request.Context())
 	req.URL.Path, req.URL.RawPath, req.RequestURI = wp.defaultPath, wp.defaultPath, wp.defaultPath
 	req.Host = wp.remoteAddr
 	if wp.beforeHandshake != nil {
