@@ -41,11 +41,13 @@ http.ListenAndServe(":9696", nil)
 ### 核心流量转发代码
 ```go
 func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Request) {
+    // 判断是否是websocket请求
 	if strings.ToLower(request.Header.Get("Connection")) != "upgrade" ||
 		strings.ToLower(request.Header.Get("Upgrade")) != "websocket" {
 		_, _ = writer.Write([]byte(`Must be a websocket request`))
 		return
 	}
+    // 劫持连接
 	hijacker, ok := writer.(http.Hijacker)
 	if !ok {
 		return
@@ -55,9 +57,11 @@ func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Reques
 		return
 	}
 	defer conn.Close()
+    // 克隆请求，设置目标地址路径
 	req := request.Clone(context.TODO())
 	req.URL.Path, req.URL.RawPath, req.RequestURI = wp.defaultPath, wp.defaultPath, wp.defaultPath
 	req.Host = wp.remoteAddr
+    // 握手之前回调
 	if wp.beforeHandshake != nil {
 		// 增加头部，权限认证 + 伪装来源
 		err = wp.beforeHandshake(req)
@@ -66,6 +70,7 @@ func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Reques
 			return
 		}
 	}
+    // 判断协议，选择拨号流程
 	var remoteConn net.Conn
 	switch wp.scheme {
 	case WsScheme:
@@ -78,9 +83,11 @@ func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Reques
 		return
 	}
 	defer remoteConn.Close()
+    // request请求转换为字节流
 	b, _ := httputil.DumpRequest(req, false)
+    // 向目标websocket服务发送握手包
 	remoteConn.Write(b)
-
+    // 流量透传
 	errChan := make(chan error, 2)
 	copyConn := func(a, b net.Conn) {
 		_, err := io.Copy(a, b)
