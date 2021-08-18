@@ -15,7 +15,7 @@ import (
     "net/http"
 )
 
-wp, err := websocketproxy.NewWebsocketProxy("ws://82.157.123.54:9010/ajaxchattest", func(r *http.Request) error {
+wp, err := websocketproxy.NewProxy("ws://82.157.123.54:9010/ajaxchattest", func(r *http.Request) error {
     // 权限验证
     r.Header.Set("Cookie", "----")
     // 伪装来源

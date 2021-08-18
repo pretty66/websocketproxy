@@ -3,6 +3,7 @@ package websocketproxy
 import (
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -27,13 +28,14 @@ type WebsocketProxy struct {
 	beforeHandshake func(r *http.Request) error // 发送握手之前回调
 }
 
+// 一定需要携带端口号，ws://www:baidu.com:80/ssss, wss://www:baidu.com:443/aaaa
 // ex: ws://82.157.123.54:9010/ajaxchattest
-func NewWebsocketProxy(addr string, beforeCallback func(r *http.Request) error) (*WebsocketProxy, error) {
+func NewProxy(addr string, beforeCallback func(r *http.Request) error) (*WebsocketProxy, error) {
 	u, err := url.Parse(addr)
 	if err != nil {
 		return nil, ErrFormatAddr
 	}
-	_, _, err = net.SplitHostPort(u.Host)
+	host, port, err := net.SplitHostPort(u.Host)
 	if err != nil {
 		return nil, ErrFormatAddr
 	}
@@ -42,7 +44,7 @@ func NewWebsocketProxy(addr string, beforeCallback func(r *http.Request) error) 
 	}
 	wp := &WebsocketProxy{
 		scheme:          u.Scheme,
-		remoteAddr:      u.Host,
+		remoteAddr:      fmt.Sprintf("%s:%s", host, port),
 		defaultPath:     u.Path,
 		beforeHandshake: beforeCallback,
 	}
