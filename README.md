@@ -1,97 +1,37 @@
 # websocket proxy
 
-### 80行代码实现websocket代理功能，不依赖三方库，支持ws、wss代理
+### 100行代码实现轻量的websocket代理库，不依赖其他三方库，支持ws、wss代理
+
+### 使用示例
+
+#### Install
+> go get pretty66/websocketproxy
+
+
+#### 
+```go
+import (
+    "github.com/pretty66/websocketproxy"
+    "net/http"
+)
+
+wp, err := websocketproxy.NewWebsocketProxy("ws://82.157.123.54:9010/ajaxchattest", func(r *http.Request) error {
+    // 权限验证
+    r.Header.Set("Cookie", "----")
+    // 伪装来源
+    r.Header.Set("Origin", "http://82.157.123.54:9010")
+    return nil
+})
+if err != nil {
+    t.Fatal()
+}
+// 代理路径
+http.HandleFunc("/wsproxy", wp.Proxy)
+http.ListenAndServe(":9696", nil)
+```
 
 ### 测试
-> go run main.go
-
-启动后监听`127.0.0.1:9696`端口，使用在线测试工具`http://coolaf.com/tool/chattest` 连接代理测试请求响应
+运行test文件启动后监听`127.0.0.1:9696`端口，使用在线测试工具`http://coolaf.com/tool/chattest` 连接代理测试请求响应
 
 ### 示例
 ![示例](ws_test.png)
-
-### 核心代码
-```go
-package main
-
-import (
-	"context"
-	"crypto/tls"
-	"io"
-	"log"
-	"net"
-	"net/http"
-	"net/http/httputil"
-	"strings"
-)
-
-const (
-	WSDailAddr    = "82.157.123.54:9010"        // 目标地址
-	WSScheme      = "ws"                        // 协议类型， ws, wss
-	WSDefaultPath = "/ajaxchattest"             // path地址
-	WSOrigin      = "http://82.157.123.54:9010" // 伪装来源
-)
-
-var tlsc = &tls.Config{InsecureSkipVerify: true} // 不验证证书
-
-func main() {
-	http.HandleFunc("/", websocketProxy)
-	err := http.ListenAndServe(":9696", nil)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func websocketProxy(writer http.ResponseWriter, request *http.Request) {
-	if strings.ToLower(request.Header.Get("Connection")) != "upgrade" ||
-		strings.ToLower(request.Header.Get("Upgrade")) != "websocket" {
-		_, _ = writer.Write([]byte(`Must be a websocket request`))
-		return
-	}
-	hijacker, ok := writer.(http.Hijacker)
-	if !ok {
-		return
-	}
-	conn, _, err := hijacker.Hijack()
-	if err != nil {
-		return
-	}
-	defer conn.Close()
-	req := request.Clone(context.TODO())
-	req.URL.Path, req.URL.RawPath, req.RequestURI = WSDefaultPath, WSDefaultPath, WSDefaultPath
-	req.Host = WSDailAddr
-	// 增加头部，权限认证 + 伪装来源
-	req.Header.Set("Cookie", "---")
-	req.Header.Set("Origin", WSOrigin)
-
-	var remoteConn net.Conn
-	switch WSScheme {
-	case "ws":
-		remoteConn, err = net.Dial("tcp", WSDailAddr)
-	case "wss":
-		remoteConn, err = tls.Dial("tcp", WSDailAddr, tlsc)
-	}
-	if err != nil {
-		panic(err)
-	}
-	defer remoteConn.Close()
-	b, _ := httputil.DumpRequest(req, false)
-	remoteConn.Write(b)
-
-	errChan := make(chan error, 2)
-	copyConn := func(a, b net.Conn) {
-		_, err := io.Copy(a, b)
-		errChan <- err
-	}
-	go copyConn(conn, remoteConn) // response
-	go copyConn(remoteConn, conn) // request
-	select {
-	case err = <-errChan:
-		if err != nil {
-			log.Println(err)
-		}
-	}
-}
-```
-
-
