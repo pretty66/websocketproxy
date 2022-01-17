@@ -1,14 +1,18 @@
 # websocket proxy
-
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/pretty66/websocketproxy)](https://github.com/IceFireDB/IceFireDB-Proxy/blob/master/go.mod)
 ### 100行代码实现轻量的websocket代理库，不依赖其他三方库，支持ws、wss代理
 
-### 使用示例
+## 目录
+- [安装](#安装)
+- [使用](#使用)
+- [测试](#测试)
+- [核心流量转发代码](#核心流量转发代码)
 
-#### Install
+### 安装
 > go get github.com/pretty66/websocketproxy
 
 
-#### 
+### 使用
 ```go
 import (
     "github.com/pretty66/websocketproxy"
@@ -33,7 +37,7 @@ http.ListenAndServe(":9696", nil)
 ### 测试
 运行test文件启动后监听`127.0.0.1:9696`端口，使用在线测试工具`http://coolaf.com/tool/chattest` 连接代理测试请求响应
 
-### 示例
+#### 示例
 ![示例](ws_test.png)
 
 
