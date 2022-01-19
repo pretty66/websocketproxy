@@ -28,9 +28,11 @@ type WebsocketProxy struct {
 	beforeHandshake func(r *http.Request) error // 发送握手之前回调
 }
 
+type Options func(wp *WebsocketProxy)
+
 // 一定需要携带端口号，ws://www:baidu.com:80/ssss, wss://www:baidu.com:443/aaaa
 // ex: ws://82.157.123.54:9010/ajaxchattest
-func NewProxy(addr string, beforeCallback func(r *http.Request) error) (*WebsocketProxy, error) {
+func NewProxy(addr string, beforeCallback func(r *http.Request) error, options ...Options) (*WebsocketProxy, error) {
 	u, err := url.Parse(addr)
 	if err != nil {
 		return nil, ErrFormatAddr
@@ -50,6 +52,9 @@ func NewProxy(addr string, beforeCallback func(r *http.Request) error) (*Websock
 	}
 	if u.Scheme == WssScheme {
 		wp.tlsc = &tls.Config{InsecureSkipVerify: true} // 不验证证书
+	}
+	for op := range options {
+		options[op](wp)
 	}
 	return wp, nil
 }
@@ -107,5 +112,11 @@ func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Reques
 		if err != nil {
 			log.Println(err)
 		}
+	}
+}
+
+func SetTLSConfig(tlsc *tls.Config) Options {
+	return func(wp *WebsocketProxy) {
+		wp.tlsc = tlsc
 	}
 }
