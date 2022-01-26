@@ -35,6 +35,7 @@ import (
 const (
 	WsScheme  = "ws"
 	WssScheme = "wss"
+	BufSize   = 1024 * 32
 )
 
 var ErrFormatAddr = errors.New("remote websockets addr format error")
@@ -121,7 +122,9 @@ func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Reques
 
 	errChan := make(chan error, 2)
 	copyConn := func(a, b net.Conn) {
-		_, err := io.Copy(a, b)
+		buf := ByteSliceGet(BufSize)
+		defer ByteSlicePut(buf)
+		_, err := io.CopyBuffer(a, b, buf)
 		errChan <- err
 	}
 	go copyConn(conn, remoteConn) // response
