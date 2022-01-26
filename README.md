@@ -107,3 +107,6 @@ func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Reques
 	}
 }
 ```
+
+## License
+websocketproxy is under the Apache 2.0 license. See the [LICENSE](./LICENSE) directory for details.
