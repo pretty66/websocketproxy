@@ -27,7 +27,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"strings"
 )
@@ -117,8 +116,7 @@ func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Reques
 		return
 	}
 	defer remoteConn.Close()
-	b, _ := httputil.DumpRequest(req, false)
-	remoteConn.Write(b)
+	req.Write(remoteConn)
 
 	errChan := make(chan error, 2)
 	copyConn := func(a, b net.Conn) {
