@@ -44,6 +44,7 @@ type WebsocketProxy struct {
 	remoteAddr      string // 目标地址: host:port
 	defaultPath     string // path地址
 	tlsc            *tls.Config
+	logger          *log.Logger
 	beforeHandshake func(r *http.Request) error // 发送握手之前回调
 }
 
@@ -68,6 +69,7 @@ func NewProxy(addr string, beforeCallback func(r *http.Request) error, options .
 		remoteAddr:      fmt.Sprintf("%s:%s", host, port),
 		defaultPath:     u.Path,
 		beforeHandshake: beforeCallback,
+		logger:          log.Default(),
 	}
 	if u.Scheme == WssScheme {
 		wp.tlsc = &tls.Config{InsecureSkipVerify: true} // 不验证证书
@@ -116,8 +118,11 @@ func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Reques
 		return
 	}
 	defer remoteConn.Close()
-	req.Write(remoteConn)
-
+	err = req.Write(remoteConn)
+	if err != nil {
+		wp.logger.Println("remote write err:", err)
+		return
+	}
 	errChan := make(chan error, 2)
 	copyConn := func(a, b net.Conn) {
 		buf := ByteSliceGet(BufSize)
@@ -138,5 +143,13 @@ func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Reques
 func SetTLSConfig(tlsc *tls.Config) Options {
 	return func(wp *WebsocketProxy) {
 		wp.tlsc = tlsc
+	}
+}
+
+func SetLogger(l *log.Logger) Options {
+	return func(wp *WebsocketProxy) {
+		if l != nil {
+			wp.logger = l
+		}
 	}
 }
