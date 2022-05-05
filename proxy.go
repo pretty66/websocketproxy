@@ -28,6 +28,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -69,7 +70,7 @@ func NewProxy(addr string, beforeCallback func(r *http.Request) error, options .
 		remoteAddr:      fmt.Sprintf("%s:%s", host, port),
 		defaultPath:     u.Path,
 		beforeHandshake: beforeCallback,
-		logger:          log.Default(),
+		logger:          log.New(os.Stderr, "", log.LstdFlags),
 	}
 	if u.Scheme == WssScheme {
 		wp.tlsc = &tls.Config{InsecureSkipVerify: true} // 不验证证书
@@ -78,6 +79,10 @@ func NewProxy(addr string, beforeCallback func(r *http.Request) error, options .
 		options[op](wp)
 	}
 	return wp, nil
+}
+
+func (wp *WebsocketProxy) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	wp.Proxy(writer, request)
 }
 
 func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Request) {

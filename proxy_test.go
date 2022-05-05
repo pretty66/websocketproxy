@@ -16,6 +16,15 @@ func TestNewWebsocketProxy(t *testing.T) {
 	http.ListenAndServe(":9696", nil)
 }
 
+func TestNewHandler(t *testing.T) {
+	tlsc := tls.Config{InsecureSkipVerify: true}
+	wp, err := NewProxy("ws://www.baidu.com:80/ajaxchattest", auth, SetTLSConfig(&tlsc))
+	if err != nil {
+		t.Fatal(err)
+	}
+	http.ListenAndServe(":9696", wp)
+}
+
 func auth(r *http.Request) error {
 	// 权限验证
 	r.Header.Set("Cookie", "----")
