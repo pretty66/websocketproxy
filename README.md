@@ -100,10 +100,10 @@ func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Reques
 	defer remoteConn.Close()
 	// Sends a handshake packet to the target WebSocket service
 	err = req.Write(remoteConn)
-    if err != nil {
-        wp.logger.Println("remote write err:", err)
-        return
-    }
+	if err != nil {
+		wp.logger.Println("remote write err:", err)
+		return
+	}
     // Traffic transparent transmission
 	errChan := make(chan error, 2)
 	copyConn := func(a, b net.Conn) {
