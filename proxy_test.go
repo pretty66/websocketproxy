@@ -26,9 +26,9 @@ func TestNewHandler(t *testing.T) {
 }
 
 func auth(r *http.Request) error {
-	// 权限验证
+	// Permission to verify
 	r.Header.Set("Cookie", "----")
-	// 伪装来源
+	// Source of disguise
 	r.Header.Set("Origin", "http://82.157.123.54:9010")
 	return nil
 }

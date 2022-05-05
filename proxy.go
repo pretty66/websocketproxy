@@ -41,18 +41,22 @@ const (
 var ErrFormatAddr = errors.New("remote websockets addr format error")
 
 type WebsocketProxy struct {
-	scheme          string // ws, wss
-	remoteAddr      string // 目标地址: host:port
-	defaultPath     string // path地址
-	tlsc            *tls.Config
-	logger          *log.Logger
-	beforeHandshake func(r *http.Request) error // 发送握手之前回调
+	// ws, wss
+	scheme string
+	// The target address: host:port
+	remoteAddr string
+	// path
+	defaultPath string
+	tlsc        *tls.Config
+	logger      *log.Logger
+	// Send handshake before callback
+	beforeHandshake func(r *http.Request) error
 }
 
 type Options func(wp *WebsocketProxy)
 
-// 一定需要携带端口号，ws://www:baidu.com:80/ssss, wss://www:baidu.com:443/aaaa
-// ex: ws://82.157.123.54:9010/ajaxchattest
+// You must carry a port number，ws://ip:80/ssss, wss://ip:443/aaaa
+// ex: ws://ip:port/ajaxchattest
 func NewProxy(addr string, beforeCallback func(r *http.Request) error, options ...Options) (*WebsocketProxy, error) {
 	u, err := url.Parse(addr)
 	if err != nil {
@@ -73,7 +77,7 @@ func NewProxy(addr string, beforeCallback func(r *http.Request) error, options .
 		logger:          log.New(os.Stderr, "", log.LstdFlags),
 	}
 	if u.Scheme == WssScheme {
-		wp.tlsc = &tls.Config{InsecureSkipVerify: true} // 不验证证书
+		wp.tlsc = &tls.Config{InsecureSkipVerify: true}
 	}
 	for op := range options {
 		options[op](wp)
@@ -104,7 +108,7 @@ func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Reques
 	req.URL.Path, req.URL.RawPath, req.RequestURI = wp.defaultPath, wp.defaultPath, wp.defaultPath
 	req.Host = wp.remoteAddr
 	if wp.beforeHandshake != nil {
-		// 增加头部，权限认证 + 伪装来源
+		// Add headers, permission authentication + masquerade sources
 		err = wp.beforeHandshake(req)
 		if err != nil {
 			_, _ = writer.Write([]byte(err.Error()))

@@ -1,29 +1,29 @@
 # websocket proxy
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/pretty66/websocketproxy)](https://github.com/pretty66/websocketproxy/blob/master/go.mod)
 
-## [中文](./README_ZH.md)
+## [English](./README.md)
 
-### Lightweight websocket proxy library
-100 lines of code implements a lightweight websocket proxy library, does not depend on other third-party libraries, and supports ws and wss proxies; if you only need a simple websocket traffic proxy function without any modification to the forwarded content, using this library will be very useful.
+### 轻量的websocket代理库
+100行代码实现轻量的websocket代理库，不依赖其他三方库，支持ws、wss代理；如果你只需要一个简单的websocket流量代理功能，不对转发的内容做任何修改，使用这个库会很有用。
 
-## Content
-- [Features](#Features)
-- [Install](#Install)
-- [Use](#Use)
-- [Test](#Test)
-- [Core code](#Core-code)
+## 目录
+- [特点](#特点)
+- [安装](#安装)
+- [使用](#使用)
+- [测试](#测试)
+- [核心流量转发代码](#核心流量转发代码)
 - [License](#License)
 
-### Features
-- Extreme performance, almost no performance loss, very low consumption of cpu and memory
-- Support websocket handshake phase for management and control
-- Supports setting header headers (cookie, origin, etc.) in the handshake phase
-- Support ws, wss proxy
+特点
+- 极致的性能，几乎无性能损耗，对cpu及内存的消耗极低
+- 支持websocket握手阶段进行管控
+- 支持握手阶段设置header头部（cookie、origin等）
+- 支持ws、wss代理
 
-### Install
+### 安装
 > go get github.com/pretty66/websocketproxy
 
-### Use
+### 使用
 ```go
 import (
     "github.com/pretty66/websocketproxy"
@@ -31,38 +31,38 @@ import (
 )
 
 wp, err := websocketproxy.NewProxy("ws://82.157.123.54:9010/ajaxchattest", func(r *http.Request) error {
-    // Permission to verify
+    // 权限验证
     r.Header.Set("Cookie", "----")
-    // Source of disguise
+    // 伪装来源
     r.Header.Set("Origin", "http://82.157.123.54:9010")
     return nil
 })
 if err != nil {
     t.Fatal()
 }
-// proxy path
+// 代理路径
 http.HandleFunc("/wsproxy", wp.Proxy)
 http.ListenAndServe(":9696", nil)
 ```
 
-### Test
-Run the test file and start listening on the `127.0.0.1:9696` port, and use the online testing tool `http://coolaf.com/tool/chattest` to connect to the proxy to test the request response
+### 测试
+运行test文件启动后监听`127.0.0.1:9696`端口，使用在线测试工具`http://coolaf.com/tool/chattest` 连接代理测试请求响应
 
-#### example
-![example](ws_test.png)
+#### 示例
+![示例](ws_test.png)
 
 
 
-### Core-code
+### 核心流量转发代码
 ```go
 func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Request) {
-    // Check whether it is a Websocket request
+    // 判断是否是websocket请求
 	if strings.ToLower(request.Header.Get("Connection")) != "upgrade" ||
 		strings.ToLower(request.Header.Get("Upgrade")) != "websocket" {
 		_, _ = writer.Write([]byte(`Must be a websocket request`))
 		return
 	}
-    // Hijack connections
+    // 劫持连接
 	hijacker, ok := writer.(http.Hijacker)
 	if !ok {
 		return
@@ -72,20 +72,20 @@ func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Reques
 		return
 	}
 	defer conn.Close()
-    // Clone request, set destination address path
+    // 克隆请求，设置目标地址路径
 	req := request.Clone(context.TODO())
 	req.URL.Path, req.URL.RawPath, req.RequestURI = wp.defaultPath, wp.defaultPath, wp.defaultPath
 	req.Host = wp.remoteAddr
-    // Handshake before callback
+    // 握手之前回调
 	if wp.beforeHandshake != nil {
-		// Add headers, permission authentication + masquerade sources
+		// 增加头部，权限认证 + 伪装来源
 		err = wp.beforeHandshake(req)
 		if err != nil {
 			_, _ = writer.Write([]byte(err.Error()))
 			return
 		}
 	}
-    // Determine the protocol and select the dialing process
+    // 判断协议，选择拨号流程
 	var remoteConn net.Conn
 	switch wp.scheme {
 	case WsScheme:
@@ -98,13 +98,13 @@ func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Reques
 		return
 	}
 	defer remoteConn.Close()
-	// Sends a handshake packet to the target WebSocket service
+	// 向目标websocket服务发送握手包
 	err = req.Write(remoteConn)
     if err != nil {
         wp.logger.Println("remote write err:", err)
         return
     }
-    // Traffic transparent transmission
+    // 流量透传
 	errChan := make(chan error, 2)
 	copyConn := func(a, b net.Conn) {
 		_, err := io.Copy(a, b)
