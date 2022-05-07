@@ -121,5 +121,9 @@ func (wp *WebsocketProxy) Proxy(writer http.ResponseWriter, request *http.Reques
 }
 ```
 
+### Thanks for free JetBrains Open Source license
+<a href="https://www.jetbrains.com/?from=github.com/pretty66/websocketproxy" target="_blank">
+<img src="https://user-images.githubusercontent.com/21053373/167233149-c91fb02f-6052-4b65-a0bb-c38df84383cb.png" height="300"/></a>
+
 ### License
 websocketproxy is under the Apache 2.0 license. See the [LICENSE](./LICENSE) directory for details.
